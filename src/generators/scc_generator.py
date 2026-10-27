@@ -1,6 +1,8 @@
 import src.generators.generator_utils as gen_utils
 import numpy as np
 import networkx as nx
+
+
 def generate_instances(configs):
     general_configs = configs['general']
     scc_configs = configs['scc']
@@ -20,7 +22,7 @@ def generate_instances(configs):
         np.random.shuffle(sccs)
         sccs = np.array_split(sccs,num_scc[instance])
         _generate_inner_attacks(sccs,scc_configs['inner_attack_prob'],curr_instance)
-        _generate_outer_attacks(sccs,scc_configs['outer_attack_prob'],curr_instance)
+        _generate_outer_attacks(sccs,scc_configs['outer_attack_prob'],curr_instance, scc_configs['connect_prob'])
         instances.append(curr_instance)
     if save:
         return gen_utils.save_instances(instances,general_configs,'scc')
@@ -36,19 +38,22 @@ def _generate_inner_attacks(sccs, inner_attack_prob, graph):
     if inner_attack_prob > 0.95:
         inner_attack_prob = 0.95
     for scc in sccs:
+        if scc.size > 1:
+            for k in range(scc.size):
+                graph.add_edge(scc[k], scc[(k + 1) % scc.size])
         for i in range(0,scc.size):
             for j in range(0,scc.size):
-                if np.random.random() < inner_attack_prob:
+                if np.random.random() < inner_attack_prob and i != j:
                     graph.add_edge(scc[i],scc[j])
 
-def _generate_outer_attacks(sccs, outer_attack_prob, graph):
+def _generate_outer_attacks(sccs, outer_attack_prob, graph, connect_prob):
     if outer_attack_prob < 0.1:
         outer_attack_prob = 0.1
     if outer_attack_prob > 0.95:
         outer_attack_prob = 0.95
     for i in range(0, len(sccs) - 1):
-        for j in range(0, len(sccs)):
-            if np.random.random() < 0.3:
+        for j in range(i+1, len(sccs)):
+            if np.random.random() < connect_prob:
                 scc_1 = sccs[i]
                 scc_2 = sccs[j]
                 for arg_1 in range(0,scc_1.size):
