@@ -3,8 +3,6 @@ import json
 from math import floor
 import random
 
-from src.utils.utils import dispatch_on_value
-
 import os
 from pathlib import Path
 from click import progressbar
@@ -14,6 +12,44 @@ import subprocess
 import time
 from networkx import DiGraph
 #from progressbar import progressbar
+
+def dispatch_on_value(func):
+    """
+    Value-dispatch function decorator.
+
+    Transforms a function into a value-dispatch function,
+    which can have different behaviors based on the value of the first argument.
+    """
+
+    registry = {}
+
+    def dispatch(value):
+
+        try:
+            return registry[value]
+        except KeyError:
+            return func
+
+    def register(value, func=None):
+
+        if func is None:
+            return lambda f: register(value, f)
+
+        registry[value] = func
+
+        return func
+
+    def wrapper(*args, **kw):
+        return dispatch(args[0])(*args, **kw)
+
+    wrapper.register = register
+    wrapper.dispatch = dispatch
+    wrapper.registry = registry
+
+    return wrapper
+
+
+
 def solve(solver,task,instance_content,timeout):
 
 
@@ -225,3 +261,5 @@ def get_num_args(general_configs, num_instances):
         return np.random.choice(range(range_args[0], range_args[1]+1), num_instances, replace=True)
     else:
         return [general_configs['num_args']] * num_instances
+
+
